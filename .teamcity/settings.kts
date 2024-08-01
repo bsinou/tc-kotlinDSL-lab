@@ -30,7 +30,9 @@ version = "2024.03"
 
 project {
     description = "Test Kotlin as DSL"
+
     vcsRoot(PetclinicVcs)
+
     buildType(Build)
 }
 
@@ -50,11 +52,13 @@ object Build : BuildType({
     }
 
     triggers {
-        vcs { }
+        vcs {
+        }
     }
 
     features {
-        perfmon { }
+        perfmon {
+        }
     }
 })
 
