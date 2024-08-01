@@ -45,14 +45,20 @@ object Build : BuildType({
     }
 
     steps {
+        script {
+            name = "Test Command Line"
+            scriptContent = """
+                echo %build.number%
+                echo "Another command"
+                echo "Yet another command"
+            """.trimIndent()
+            scriptContent = "echo %build.number%"
+        }
         maven {
             name = "Maven Build"
             id = "Maven2"
             goals = "clean test"
             runnerArgs = "-Dmaven.test.failure.ignore=true"
-        }
-        script {
-            scriptContent = "echo %build.number%"
         }
     }
 
