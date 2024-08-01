@@ -30,9 +30,7 @@ version = "2024.03"
 
 project {
     description = "Test Kotlin as DSL"
-
-    vcsRoot(HttpsGithubComSpringProjectsSpringPetclinicRefsHeadsMain)
-
+    vcsRoot(PetclinicVcs)
     buildType(Build)
 }
 
@@ -40,7 +38,7 @@ object Build : BuildType({
     name = "Build"
 
     vcs {
-        root(HttpsGithubComSpringProjectsSpringPetclinicRefsHeadsMain)
+        root(PetclinicVcs)
     }
 
     steps {
@@ -52,17 +50,15 @@ object Build : BuildType({
     }
 
     triggers {
-        vcs {
-        }
+        vcs { }
     }
 
     features {
-        perfmon {
-        }
+        perfmon { }
     }
 })
 
-object HttpsGithubComSpringProjectsSpringPetclinicRefsHeadsMain : GitVcsRoot({
+object PetclinicVcs : GitVcsRoot({
     name = "https://github.com/spring-projects/spring-petclinic#refs/heads/main"
     url = "https://github.com/spring-projects/spring-petclinic"
     branch = "refs/heads/main"
