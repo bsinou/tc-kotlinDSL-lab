@@ -88,6 +88,17 @@ create(DslContext.projectId, BuildType({
                 go test -v %RUN_PACKAGES% ${'$'}{args}
             """.trimIndent()
         }
+        script {
+            name = "Clean after tests"
+            id = "Clean_after_tests"
+            scriptContent = """
+                echo "... Trying to force remove all containers"
+                echo "     => will throw Warning for containers that have *not* been started"
+                docker rm -f mysqldb
+                
+                echo "     ==> OK"
+            """.trimIndent()
+        }
     }
 }))
 
