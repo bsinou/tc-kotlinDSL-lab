@@ -123,6 +123,18 @@ object UnitTestPoc : BuildType (
                 echo "     ==> OK"
             """.trimIndent()
             }
+
+            script {
+                name = "Wait for container"
+                id = "wait_before_run"
+                scriptContent = """
+                
+                echo "...  Wait 60 second to inusre container is correctly started"
+                sleep 60
+                echo "     ==> Done sleeping"
+            """.trimIndent()
+            }
+
             script {
                 name = "Run Tests"
                 id = "Run_Tests"
