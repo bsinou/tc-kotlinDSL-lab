@@ -15,6 +15,10 @@ create(DslContext.projectId, BuildType({
     name = "Test Unit Tests Config"
     description = "Try a real life example"
 
+    params {
+        param("RUN_LOG_JSON", "false")
+    }
+
     vcs {
         root(AbsoluteId("Build_CellsHomeNext"))
     }
