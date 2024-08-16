@@ -19,7 +19,7 @@ create(DslContext.projectId, BuildType({
         param("RUN_LOG_JSON", "false")
         param("RUN_TAGS", "storage")
         param("RUN_PACKAGES", "./idm/...")
-        param("RUN_SINGLE_TEST_PATTERN", " ")
+        param("RUN_SINGLE_TEST_PATTERN", "")
     }
 
     vcs {
