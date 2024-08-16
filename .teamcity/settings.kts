@@ -93,6 +93,7 @@ object UnitTestPoc : BuildType (
         id("UnitTestsPoc")
         name = "Test Unit Tests Config"
         description = "Try a real life example"
+        maxRunningBuilds = 1
 
         params {
             param("RUN_LOG_JSON", "false")
@@ -164,7 +165,7 @@ object UnitTestPoc : BuildType (
                 echo "... Launch command:"
                 echo "go test %RUN_PACKAGES% ${'$'}{args}"
                 
-                go test -v %RUN_PACKAGES% ${'$'}{args}
+                go test %RUN_PACKAGES% ${'$'}{args}-v 
             """.trimIndent()
             }
             script {
