@@ -168,7 +168,7 @@ object UnitTestPoc : BuildType (
                 echo "... Launch command:"
                 echo "go test %RUN_PACKAGES% ${'$'}{args}"
                 
-                go test %RUN_PACKAGES% ${'$'}{args}-v 
+                go test %RUN_PACKAGES% ${'$'}{args} 
             """.trimIndent()
             }
             script {
