@@ -2,6 +2,7 @@ package patches.buildTypes
 
 import jetbrains.buildServer.configs.kotlin.*
 import jetbrains.buildServer.configs.kotlin.BuildType
+import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.ui.*
 
 /*
@@ -16,6 +17,25 @@ create(DslContext.projectId, BuildType({
 
     vcs {
         root(AbsoluteId("Build_CellsHomeNext"))
+    }
+
+    steps {
+        script {
+            name = "Relaunch container"
+            id = "Relaunch_container"
+            scriptContent = """
+                echo -n "... Force removing existing mysql DB container: "
+                docker rm -f mysqldb
+                sleep 2
+                echo "     ==> OK"
+                
+                echo "...  Pull and relaunch a new container"
+                docker pull mysql:latest
+                docker run --name mysqldb -p 26999:3306 -e MYSQL_ROOT_PASSWORD=admin -d mysql:latest
+                sleep 2
+                echo "     ==> OK"
+            """.trimIndent()
+        }
     }
 }))
 
