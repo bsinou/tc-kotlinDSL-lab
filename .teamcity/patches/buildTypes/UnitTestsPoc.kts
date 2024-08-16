@@ -41,16 +41,44 @@ create(DslContext.projectId, BuildType({
             id = "Run_Tests"
             scriptContent = """
                 host="localhost"
-                	port="26999"
-                	username="root"
-                	password="admin"
-                	dbname="testdb"
-                	# We must create the DB before launching the tests
-                    cmd="mysql -h ${'$'}{host} -P ${'$'}{port} --protocol=TCP -u${'$'}{username} -p${'$'}{password}"
-                	${'$'}cmd -e "CREATE DATABASE IF NOT EXISTS testdb;"
-                	dburl="mysql://${'$'}{username}:${'$'}{password}@tcp(${'$'}{host}:${'$'}{port})/${'$'}{dbname}"
-                	echo "... MySQL DB URL: ${'$'}dburl"
-                	mysql_urls="${'$'}dburl"
+                port="26999"
+                username="root"
+                password="admin"
+                dbname="testdb"
+                
+                # We must create the DB before launching the tests
+                cmd="mysql -h ${'$'}{host} -P ${'$'}{port} --protocol=TCP -u${'$'}{username} -p${'$'}{password}"
+                ${'$'}cmd -e "CREATE DATABASE IF NOT EXISTS testdb;"
+                dburl="mysql://${'$'}{username}:${'$'}{password}@tcp(${'$'}{host}:${'$'}{port})/${'$'}{dbname}"
+                echo "... MySQL DB URL: ${'$'}dburl"
+                mysql_urls="${'$'}dburl"
+                
+                export CELLS_TEST_MYSQL_DSN="${'$'}mysql_urls"
+                
+                
+                echo "... Listing test ENV:"
+                printenv | grep CELLS_TEST
+                
+                export GOROOT=/usr/local/go22
+                export PATH=${'$'}GOROOT/bin:${'$'}PATH
+                export GOFLAGS="-count=1 -tags=%RUN_TAGS%"
+                
+                # Base argument for this build
+                args="-v"
+                
+                if [ "true" = "%RUN_LOG_JSON%"  ]; then
+                   # Integrate with TC by using json output
+                   args="${'$'}{args} -json"
+                fi
+                
+                if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
+                	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
+                fi
+                
+                echo "... Launch command:"
+                echo "go test %RUN_PACKAGES% ${'$'}{args}"
+                
+                go test -v %RUN_PACKAGES% ${'$'}{args}
             """.trimIndent()
         }
     }
