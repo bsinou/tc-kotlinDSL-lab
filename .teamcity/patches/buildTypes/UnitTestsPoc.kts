@@ -36,6 +36,23 @@ create(DslContext.projectId, BuildType({
                 echo "     ==> OK"
             """.trimIndent()
         }
+        script {
+            name = "Run Tests"
+            id = "Run_Tests"
+            scriptContent = """
+                host="localhost"
+                	port="26999"
+                	username="root"
+                	password="admin"
+                	dbname="testdb"
+                	# We must create the DB before launching the tests
+                    cmd="mysql -h ${'$'}{host} -P ${'$'}{port} --protocol=TCP -u${'$'}{username} -p${'$'}{password}"
+                	${'$'}cmd -e "CREATE DATABASE IF NOT EXISTS testdb;"
+                	dburl="mysql://${'$'}{username}:${'$'}{password}@tcp(${'$'}{host}:${'$'}{port})/${'$'}{dbname}"
+                	echo "... MySQL DB URL: ${'$'}dburl"
+                	mysql_urls="${'$'}dburl"
+            """.trimIndent()
+        }
     }
 }))
 
