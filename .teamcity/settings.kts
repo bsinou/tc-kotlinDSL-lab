@@ -127,6 +127,9 @@ object UnitTestPoc : BuildType (
                 name = "Run Tests"
                 id = "Run_Tests"
                 scriptContent = """
+
+                echo "... Launching TC Build from Kotlin DSL"
+
                 host="localhost"
                 port="26999"
                 username="root"
