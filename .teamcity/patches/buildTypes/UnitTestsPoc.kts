@@ -13,5 +13,9 @@ create(DslContext.projectId, BuildType({
     id("UnitTestsPoc")
     name = "Test Unit Tests Config"
     description = "Try a real life example"
+
+    vcs {
+        root(AbsoluteId("Build_CellsHomeNext"))
+    }
 }))
 
