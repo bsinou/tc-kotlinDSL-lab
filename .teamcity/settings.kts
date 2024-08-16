@@ -30,10 +30,21 @@ To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
 
 version = "2024.03"
 
+object PetClinicVcs : GitVcsRoot({
+    name = "https://github.com/spring-projects/spring-petclinic#refs/heads/main"
+    url = "https://github.com/spring-projects/spring-petclinic"
+    branch = "refs/heads/main"
+    branchSpec = "refs/heads/*"
+    authMethod = password {
+        userName = "bsinou"
+        password = "credentialsJSON:4cf4a333-b1fa-43c7-abd1-3209a0a24c51"
+    }
+})
+
 project {
     description = "Test Kotlin as DSL"
 
-    vcsRoot(PetclinicVcs)
+    vcsRoot(PetClinicVcs)
 
     buildType(Build)
 }
@@ -42,7 +53,7 @@ object Build : BuildType({
     name = "Build"
 
     vcs {
-        root(PetclinicVcs)
+        root(PetClinicVcs)
     }
 
     steps {
@@ -72,16 +83,5 @@ object Build : BuildType({
         perfmon {
         }
         swabra {  }
-    }
-})
-
-object PetclinicVcs : GitVcsRoot({
-    name = "https://github.com/spring-projects/spring-petclinic#refs/heads/main"
-    url = "https://github.com/spring-projects/spring-petclinic"
-    branch = "refs/heads/main"
-    branchSpec = "refs/heads/*"
-    authMethod = password {
-        userName = "bsinou"
-        password = "credentialsJSON:4cf4a333-b1fa-43c7-abd1-3209a0a24c51"
     }
 })
