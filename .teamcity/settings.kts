@@ -30,69 +30,34 @@ To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
 
 version = "2024.03"
 
-object PetClinicVcs : GitVcsRoot({
-    name = "https://github.com/spring-projects/spring-petclinic#refs/heads/main"
-    url = "https://github.com/spring-projects/spring-petclinic"
-    branch = "refs/heads/main"
-    branchSpec = "refs/heads/*"
-    authMethod = password {
-        userName = "bsinou"
-        password = "credentialsJSON:4cf4a333-b1fa-43c7-abd1-3209a0a24c51"
-    }
-})
-
+// Define the build configurations
 project {
     description = "Test Kotlin as DSL"
 
     vcsRoot(PetClinicVcs)
 
-    buildType(Build)
+    buildType(MavenBuildPoc)
 
-    buildType(UnitTestPoc)
+    for (imgTag in imageTags) {
+            buildType(UnitTestPoc(imgTag))
+    }
+
+    // buildType(UnitTestPoc)
 }
 
-object Build : BuildType({
-    name = "Build"
+// Unit test Matrix Tests
 
-    vcs {
-        root(PetClinicVcs)
-    }
+// List of images to test
+val imageTags =
+    listOf("mysql:latest", "mysql:8.4", "mysql:8.0", "mysql:5.7", "mariadb:11", "mariadb:10", "mariadb:10.6")
 
-    steps {
-        script {
-            name = "Test Command Line"
-            scriptContent = """
-                echo %build.number%
-                echo "Another command"
-                echo "Yet another command"
-            """.trimIndent()
-            scriptContent = "echo %build.number%"
-        }
-        maven {
-            name = "Maven Build"
-            id = "Maven2"
-            goals = "clean test"
-            runnerArgs = "-Dmaven.test.failure.ignore=true"
-        }
-    }
+class UnitTestPoc(val imgTag: String) : BuildType({
+    id("TestUnit_${imgTag}".toId())
+    name = "MySQL Unit Tests for $imgTag"
 
-    triggers {
-        vcs {
-        }
-    }
-
-    features {
-        perfmon {
-        }
-        swabra {  }
-    }
-})
-
-object UnitTestPoc : BuildType (
-    {
-        id("UnitTestsPoc")
-        name = "Test Unit Tests Config"
-        description = "Try a real life example"
+//         id("UnitTestsPoc")
+//         name = "Test Unit Tests Config"
+        description = "Perform the tests against a specific version"
         maxRunningBuilds = 1
 
         params {
@@ -117,7 +82,7 @@ object UnitTestPoc : BuildType (
                 echo "     ==> OK"
                 
                 echo "...  Pull and relaunch a new container"
-                docker pull mysql:latest
+                docker pull $imgTag
                 docker run --name mysqldb -p 26999:3306 -e MYSQL_ROOT_PASSWORD=admin -d mysql:latest
                 sleep 2
                 echo "     ==> OK"
@@ -129,7 +94,7 @@ object UnitTestPoc : BuildType (
                 id = "wait_before_run"
                 scriptContent = """
                 
-                echo "...  Wait 60 second to inusre container is correctly started"
+                echo "...  Wait 60 second to insure that the container is correctly started"
                 sleep 60
                 echo "     ==> Done sleeping"
             """.trimIndent()
@@ -156,8 +121,7 @@ object UnitTestPoc : BuildType (
                 mysql_urls="${'$'}dburl"
                 
                 export CELLS_TEST_MYSQL_DSN="${'$'}mysql_urls"
-                
-                
+               
                 echo "... Listing test ENV:"
                 printenv | grep CELLS_TEST
                 
@@ -197,3 +161,54 @@ object UnitTestPoc : BuildType (
         }
     }
 )
+
+// First Hops based on https://blog.jetbrains.com/teamcity/2019/03/configuration-as-code-part-1-getting-started-with-kotlin-dsl/
+object PetClinicVcs : GitVcsRoot({
+    name = "https://github.com/spring-projects/spring-petclinic#refs/heads/main"
+    url = "https://github.com/spring-projects/spring-petclinic"
+    branch = "refs/heads/main"
+    branchSpec = "refs/heads/*"
+    authMethod = password {
+        userName = "bsinou"
+        password = "credentialsJSON:4cf4a333-b1fa-43c7-abd1-3209a0a24c51"
+    }
+})
+
+object MavenBuildPoc : BuildType({
+    name = "Maven Build PoC"
+
+    vcs {
+        root(PetClinicVcs)
+    }
+
+    steps {
+        script {
+            name = "Test Command Line"
+            scriptContent = """
+                echo %build.number%
+                echo "Another command"
+                echo "Yet another command"
+            """.trimIndent()
+            scriptContent = "echo %build.number%"
+        }
+        maven {
+            name = "Maven Build"
+            id = "Maven2"
+            goals = "clean test"
+            runnerArgs = "-Dmaven.test.failure.ignore=true"
+        }
+    }
+
+    triggers {
+        vcs {
+        }
+    }
+
+    features {
+        perfmon {
+        }
+        swabra { }
+    }
+})
+
+
