@@ -30,6 +30,10 @@ To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
 
 version = "2024.03"
 
+// List of MySql Docker images to test
+val imageTags =
+    listOf("mysql:latest", "mysql:8.4", "mysql:8.0", "mysql:5.7", "mariadb:11", "mariadb:10", "mariadb:10.6")
+
 // Define the build configurations
 project {
     description = "Test Kotlin as DSL"
@@ -41,16 +45,9 @@ project {
     for (imgTag in imageTags) {
             buildType(UnitTestPoc(imgTag))
     }
-
-    // buildType(UnitTestPoc)
 }
 
-// Unit test Matrix Tests
-
-// List of images to test
-val imageTags =
-    listOf("mysql:latest", "mysql:8.4", "mysql:8.0", "mysql:5.7", "mariadb:11", "mariadb:10", "mariadb:10.6")
-
+// Define a "dynamic" build config for MySQL Unit tests
 class UnitTestPoc(val imgTag: String) : BuildType({
     id("TestUnit_${imgTag}".toId())
     name = "MySQL Unit Tests for $imgTag"
