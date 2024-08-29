@@ -28,7 +28,7 @@ To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
 'Debug' option is available in the context menu for the task.
 */
 
-version = "2024.07"
+version = "2024.03"
 
 // List of MySql Docker images to test
 val imageTags: ArrayList<String>
