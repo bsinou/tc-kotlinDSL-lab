@@ -48,7 +48,7 @@ project {
 }
 
 // Define a "dynamic" build config for MySQL Unit tests
-class UnitTestPoc(val imgTag: String) : BuildType({
+class UnitTestPoc(imgTag: String) : BuildType({
     id("TestUnit_${imgTag}".toId())
     name = "MySQL Unit Tests for $imgTag"
 
