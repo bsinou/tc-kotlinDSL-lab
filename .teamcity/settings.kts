@@ -32,7 +32,15 @@ version = "2024.03"
 
 // List of MySql Docker images to test
 val imageTags: ArrayList<String>
-    get() = arrayListOf("mysql:latest", "mysql:8.4", "mysql:8.0", "mysql:5.7", "mariadb:11", "mariadb:10", "mariadb:10.6")
+    get() = arrayListOf(
+        "mysql:latest",
+        "mysql:8.4",
+        "mysql:8.0",
+        "mysql:5.7",
+        "mariadb:11",
+        "mariadb:10",
+        "mariadb:10.6"
+    )
 
 // Define the build configurations
 project {
@@ -43,7 +51,7 @@ project {
     buildType(MavenBuildPoc)
 
     for (imgTag in imageTags) {
-            buildType(UnitTestPoc(imgTag))
+        buildType(UnitTestPoc(imgTag))
     }
 }
 
@@ -52,27 +60,25 @@ class UnitTestPoc(imgTag: String) : BuildType({
     id("TestUnit_${imgTag}".toId())
     name = "MySQL Unit Tests for $imgTag"
 
-//         id("UnitTestsPoc")
-//         name = "Test Unit Tests Config"
-        description = "Perform the tests against a specific version"
-        maxRunningBuilds = 1
+    description = "Perform the tests against a specific version"
+    maxRunningBuilds = 1
 
-        params {
-            param("RUN_LOG_JSON", "false")
-            param("RUN_TAGS", "storage")
-            param("RUN_PACKAGES", "./idm/...")
-            param("RUN_SINGLE_TEST_PATTERN", "")
-        }
+    params {
+        param("RUN_LOG_JSON", "false")
+        param("RUN_TAGS", "storage")
+        param("RUN_PACKAGES", "./idm/...")
+        param("RUN_SINGLE_TEST_PATTERN", "")
+    }
 
-        vcs {
-            root(AbsoluteId("Build_CellsHomeNext"))
-        }
+    vcs {
+        root(AbsoluteId("Build_CellsHomeNext"))
+    }
 
-        steps {
-            script {
-                name = "Relaunch container"
-                id = "Relaunch_container"
-                scriptContent = """
+    steps {
+        script {
+            name = "Relaunch container"
+            id = "Relaunch_container"
+            scriptContent = """
                 echo -n "... Force removing existing mysql DB container: "
                 docker rm -f mysqldb
                 sleep 2
@@ -84,23 +90,23 @@ class UnitTestPoc(imgTag: String) : BuildType({
                 sleep 2
                 echo "     ==> OK"
             """.trimIndent()
-            }
+        }
 
-            script {
-                name = "Wait for container"
-                id = "wait_before_run"
-                scriptContent = """
+        script {
+            name = "Wait for container"
+            id = "wait_before_run"
+            scriptContent = """
                 
                 echo "...  Wait 60 second to insure that the container is correctly started"
                 sleep 60
                 echo "     ==> Done sleeping"
             """.trimIndent()
-            }
+        }
 
-            script {
-                name = "Run Tests"
-                id = "Run_Tests"
-                scriptContent = """
+        script {
+            name = "Run Tests"
+            id = "Run_Tests"
+            scriptContent = """
 
                 echo "... Launching TC Build from Kotlin DSL"
 
@@ -143,20 +149,20 @@ class UnitTestPoc(imgTag: String) : BuildType({
                 
                 go test %RUN_PACKAGES% ${'$'}{args} 
             """.trimIndent()
-            }
-            script {
-                name = "Clean after tests"
-                id = "Clean_after_tests"
-                scriptContent = """
+        }
+        script {
+            name = "Clean after tests"
+            id = "Clean_after_tests"
+            scriptContent = """
                 echo "... Trying to force remove all containers"
                 echo "     => will throw Warning for containers that have *not* been started"
                 docker rm -f mysqldb
                 
                 echo "     ==> OK"
             """.trimIndent()
-            }
         }
     }
+}
 )
 
 // First Hops based on https://blog.jetbrains.com/teamcity/2019/03/configuration-as-code-part-1-getting-started-with-kotlin-dsl/
@@ -207,5 +213,3 @@ object MavenBuildPoc : BuildType({
         swabra { }
     }
 })
-
-
