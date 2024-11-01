@@ -29,8 +29,8 @@ To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
 'Debug' option is available in the context menu for the task.
 */
 
-// version indicates the TeamCity version
-version = "2024.07.3"
+// version indicates the TeamCity DSL version. In Nov 2024, with TC 2024.07.3, this is the supported version:
+version = "2024.03"
 
 // List of MySql Docker images to test
 val imageTags: ArrayList<String>
