@@ -74,7 +74,7 @@ class UnitTestPoc(imgTag: String) : BuildType({
         // (no bolt / no bleve)
         param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
 
-        param("RUN_LOG_JSON", "false")
+        param("RUN_LOG_JSON", "true")
         param("RUN_TAGS", "storage")
 
         param("RUN_PACKAGES", "./idm/... ./broker/... ./data/... ./scheduler/... ./common/storage/sql/...")
