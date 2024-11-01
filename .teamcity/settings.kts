@@ -28,6 +28,7 @@ To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
 'Debug' option is available in the context menu for the task.
 */
 
+// version indicates the TeamCity version
 version = "2024.03"
 
 // List of MySql Docker images to test
@@ -43,6 +44,9 @@ val imageTags: ArrayList<String>
     )
 
 // Define the build configurations
+// `project()` is the main entry point to the configuration script.
+// It is a function call, which takes as a parameter a block that represents the entire TeamCity project.
+// In that block, we compose the structure of the project.
 project {
     description = "Test Kotlin as DSL"
 
@@ -64,6 +68,12 @@ class UnitTestPoc(imgTag: String) : BuildType({
     maxRunningBuilds = 1
 
     params {
+
+        // Skip default storages during the tests
+        param("env.CELLS_TEST_SKIP_SQLITE", "true")
+        // (no bolt / no bleve)
+        param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
+
         param("RUN_LOG_JSON", "false")
         param("RUN_TAGS", "storage")
         param("RUN_PACKAGES", "./idm/...")
