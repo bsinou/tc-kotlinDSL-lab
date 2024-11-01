@@ -68,21 +68,25 @@ class UnitTestPoc(imgTag: String) : BuildType({
     maxRunningBuilds = 1
 
     params {
-
         // Skip default storages during the tests
         param("env.CELLS_TEST_SKIP_SQLITE", "true")
         // (no bolt / no bleve)
         param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
 
+        param("RUN_PACKAGES", "./idm/... ./broker/... ./data/... ./scheduler/... ./common/storage/sql/...")
         param("RUN_LOG_JSON", "true")
         param("RUN_TAGS", "storage")
-
-        param("RUN_PACKAGES", "./idm/... ./broker/... ./data/... ./scheduler/... ./common/storage/sql/...")
         param("RUN_SINGLE_TEST_PATTERN", "")
     }
 
     vcs {
         root(AbsoluteId("Build_CellsHomeNext"))
+    }
+
+    features {
+        golang {
+            testFormat = "json"
+        }
     }
 
     steps {
