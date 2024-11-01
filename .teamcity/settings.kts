@@ -1,6 +1,7 @@
 import jetbrains.buildServer.configs.kotlin.*
 import jetbrains.buildServer.configs.kotlin.buildFeatures.perfmon
 import jetbrains.buildServer.configs.kotlin.buildFeatures.swabra
+import jetbrains.buildServer.configs.kotlin.buildFeatures.golang
 import jetbrains.buildServer.configs.kotlin.buildSteps.maven
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.triggers.vcs
@@ -29,7 +30,7 @@ To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
 */
 
 // version indicates the TeamCity version
-version = "2024.03"
+version = "2024.07.3"
 
 // List of MySql Docker images to test
 val imageTags: ArrayList<String>
@@ -81,12 +82,6 @@ class UnitTestPoc(imgTag: String) : BuildType({
 
     vcs {
         root(AbsoluteId("Build_CellsHomeNext"))
-    }
-
-    features {
-        golang {
-            testFormat = "json"
-        }
     }
 
     steps {
@@ -175,6 +170,13 @@ class UnitTestPoc(imgTag: String) : BuildType({
                 
                 echo "     ==> OK"
             """.trimIndent()
+        }
+    }
+
+    features {
+        golang {
+            enabled = true
+            testFormat = "json"
         }
     }
 }
