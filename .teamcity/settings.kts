@@ -76,7 +76,8 @@ class UnitTestPoc(imgTag: String) : BuildType({
 
         param("RUN_LOG_JSON", "false")
         param("RUN_TAGS", "storage")
-        param("RUN_PACKAGES", "./idm/...")
+
+        param("RUN_PACKAGES", "./idm/... ./broker/... ./data/... ./scheduler/... ./common/storage/sql/...")
         param("RUN_SINGLE_TEST_PATTERN", "")
     }
 
