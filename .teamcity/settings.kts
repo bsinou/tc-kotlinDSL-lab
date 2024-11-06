@@ -33,7 +33,7 @@ To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
 version = "2024.03"
 
 // List of MySql Docker images to test
-val imageTags: ArrayList<String>
+val mySqlImageTags: ArrayList<String>
     get() = arrayListOf(
         "mysql:latest",
         "mysql:8.4",
@@ -41,21 +41,29 @@ val imageTags: ArrayList<String>
         "mysql:5.7",
         "mariadb:11",
         "mariadb:10",
-        "mariadb:10.6"
+        "mariadb:10.6",
     )
+
+// List of PgSQL Docker images to test
+val mySqlImageTags: ArrayList<String>
+    get() = arrayListOf(
+        "postgres:latest",
+        "postgres:bulleyes",
+        "postgres:alpine",
+        "postgres:16.4",
+        "postgres:15.8",
+    )
+
+val runPackages = "./idm/... ./broker/... ./data/... ./scheduler/... ./common/storage/sql/..."
 
 // Define the build configurations
 // `project()` is the main entry point to the configuration script.
 // It is a function call, which takes as a parameter a block that represents the entire TeamCity project.
 // In that block, we compose the structure of the project.
 project {
-    description = "Test Kotlin as DSL"
+    description = "Cells V5 Unit Tests for SQL DB"
 
-    vcsRoot(PetClinicVcs)
-
-    buildType(MavenBuildPoc)
-
-    for (imgTag in imageTags) {
+    for (imgTag in mySqlImageTags) {
         buildType(UnitTestPoc(imgTag))
     }
 }
@@ -68,26 +76,26 @@ class UnitTestPoc(imgTag: String) : BuildType({
     description = "Perform the tests against a specific version"
     maxRunningBuilds = 1
 
+    vcs {
+        root(AbsoluteId("Build_CellsHomeNext"))
+    }
+
     params {
         // Skip default storages during the tests
         param("env.CELLS_TEST_SKIP_SQLITE", "true")
         // (no bolt / no bleve)
-        param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
+        // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
 
-        param("RUN_PACKAGES", "./idm/... ./broker/... ./data/... ./scheduler/... ./common/storage/sql/...")
+        param("RUN_PACKAGES", runPackages)
         param("RUN_LOG_JSON", "true")
         param("RUN_TAGS", "storage")
         param("RUN_SINGLE_TEST_PATTERN", "")
     }
 
-    vcs {
-        root(AbsoluteId("Build_CellsHomeNext"))
-    }
-
     steps {
         script {
-            name = "Relaunch container"
-            id = "Relaunch_container"
+            name = "Relaunch MySQL container"
+            id = "relaunch_mysql_container"
             scriptContent = """
                 echo -n "... Force removing existing mysql DB container: "
                 docker rm -f mysqldb
@@ -96,7 +104,7 @@ class UnitTestPoc(imgTag: String) : BuildType({
                 
                 echo "...  Pull and relaunch a new container"
                 docker pull $imgTag
-                docker run --name mysqldb -p 26999:3306 -e MYSQL_ROOT_PASSWORD=admin -d mysql:latest
+                docker run --name mysqldb -p 26999:3306 -e MYSQL_ROOT_PASSWORD=admin -d $imgTag
                 sleep 2
                 echo "     ==> OK"
             """.trimIndent()
@@ -105,8 +113,7 @@ class UnitTestPoc(imgTag: String) : BuildType({
         script {
             name = "Wait for container"
             id = "wait_before_run"
-            scriptContent = """
-                
+            scriptContent = """               
                 echo "...  Wait 60 second to insure that the container is correctly started"
                 sleep 60
                 echo "     ==> Done sleeping"
@@ -117,7 +124,6 @@ class UnitTestPoc(imgTag: String) : BuildType({
             name = "Run Tests"
             id = "Run_Tests"
             scriptContent = """
-
                 echo "... Launching TC Build from Kotlin DSL"
 
                 host="localhost"
@@ -183,6 +189,7 @@ class UnitTestPoc(imgTag: String) : BuildType({
 )
 
 // First Hops based on https://blog.jetbrains.com/teamcity/2019/03/configuration-as-code-part-1-getting-started-with-kotlin-dsl/
+/*
 object PetClinicVcs : GitVcsRoot({
     name = "https://github.com/spring-projects/spring-petclinic#refs/heads/main"
     url = "https://github.com/spring-projects/spring-petclinic"
@@ -230,3 +237,4 @@ object MavenBuildPoc : BuildType({
         swabra { }
     }
 })
+*/
