@@ -93,7 +93,7 @@ class MySqlUnitTests(imgTag: String) : BuildType({
         // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
 
         param("RUN_PACKAGES", runPackages)
-        param("RUN_LOG_JSON", "true")
+        param("RUN_LOG_JSON", "false")
         param("RUN_TAGS", "storage")
         param("RUN_SINGLE_TEST_PATTERN", "")
     }
