@@ -45,7 +45,7 @@ val mySqlImageTags: ArrayList<String>
     )
 
 // List of PgSQL Docker images to test
-val mySqlImageTags: ArrayList<String>
+val pgSqlImageTags: ArrayList<String>
     get() = arrayListOf(
         "postgres:latest",
         "postgres:bulleyes",
@@ -61,15 +61,21 @@ val runPackages = "./idm/... ./broker/... ./data/... ./scheduler/... ./common/st
 // It is a function call, which takes as a parameter a block that represents the entire TeamCity project.
 // In that block, we compose the structure of the project.
 project {
+
     description = "Cells V5 Unit Tests for SQL DB"
 
     for (imgTag in mySqlImageTags) {
-        buildType(UnitTestPoc(imgTag))
+        buildType(MySqlUnitTests(imgTag))
     }
+
+    for (imgTag in pgSqlImageTags) {
+        buildType(PgSqlUnitTests(imgTag))
+    }
+
 }
 
 // Define a "dynamic" build config for MySQL Unit tests
-class UnitTestPoc(imgTag: String) : BuildType({
+class MySqlUnitTests(imgTag: String) : BuildType({
     id("TestUnit_${imgTag}".toId())
     name = "MySQL Unit Tests for $imgTag"
 
