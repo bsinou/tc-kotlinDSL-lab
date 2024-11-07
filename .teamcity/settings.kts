@@ -188,6 +188,120 @@ class UnitTestPoc(imgTag: String) : BuildType({
 }
 )
 
+// Define a "dynamic" build config for MySQL Unit tests
+class PgSqlUnitTests(imgTag: String) : BuildType({
+    id("TestUnit_${imgTag}".toId())
+    name = "PG SQL Unit Tests for $imgTag"
+
+    description = "Perform the tests against a specific version of the PostgreSQL DB"
+    maxRunningBuilds = 1
+
+    vcs {
+        root(AbsoluteId("Build_CellsHomeNext"))
+    }
+
+    params {
+        // Skip default storages during the tests
+        param("env.CELLS_TEST_SKIP_SQLITE", "true")
+        // (no bolt / no bleve)
+        // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
+
+        param("RUN_PACKAGES", runPackages)
+        param("RUN_LOG_JSON", "true")
+        param("RUN_TAGS", "storage")
+        param("RUN_SINGLE_TEST_PATTERN", "")
+    }
+
+    steps {
+        script {
+            name = "Relaunch PG SQL container"
+            id = "relaunch_pgsql_container"
+            scriptContent = """
+                echo -n "... Force removing existing PGSQL DB container: "
+                docker rm -f pgsqldb
+                sleep 2
+                echo "     ==> OK"
+                
+                echo "...  Pull and relaunch a new container"
+                docker pull $imgTag
+                docker run --name pgsqldb -p 26998:5432 -e POSTGRES_USER=pydio -e POSTGRES_PASSWORD=cells -e POSTGRES_DB=testdb -d $imgTag
+                sleep 2
+                echo "     ==> OK"
+            """.trimIndent()
+        }
+
+        script {
+            name = "Wait for container"
+            id = "wait_before_run"
+            scriptContent = """               
+                echo "...  Wait 60 second to insure that the container is correctly started"
+                sleep 60
+                echo "     ==> Done sleeping"
+            """.trimIndent()
+        }
+
+        script {
+            name = "Run Tests"
+            id = "Run_Tests"
+            scriptContent = """
+                echo "... Launching TC Build from Kotlin DSL"
+
+        	    host="localhost"
+        	    port="26998"
+        	    username="pydio"
+        	    password="cells"
+        	    dbname="testdb"
+        	    dbdsn="postgres://${'$'}{username}:${'$'}{password}@${'$'}{host}:${'$'}{port}/${'$'}{dbname}?sslmode=disable"
+        	    echo "... PGSQL DB URL: ${'$'}dbdsn"
+        	    export CELLS_TEST_PGSQL_DSN="${'$'}dbdsn"
+                               
+                echo "... Listing test ENV:"
+                printenv | grep CELLS_TEST
+                
+                export GOROOT=/usr/local/go22
+                export PATH=${'$'}GOROOT/bin:${'$'}PATH
+                export GOFLAGS="-count=1 -tags=%RUN_TAGS%"
+                
+                # Base argument for this build
+                args="-v"
+                
+                if [ "true" = "%RUN_LOG_JSON%"  ]; then
+                   # Integrate with TC by using json output
+                   args="${'$'}{args} -json"
+                fi
+                
+                if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
+                	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
+                fi
+                
+                echo "... Launch command:"
+                echo "go test %RUN_PACKAGES% ${'$'}{args}"
+                
+                go test %RUN_PACKAGES% ${'$'}{args} 
+            """.trimIndent()
+        }
+        script {
+            name = "Clean after tests"
+            id = "Clean_after_tests"
+            scriptContent = """
+                echo "... Trying to force remove the PGSQL container"
+                echo "     => will throw Warning for containers that have *not* been started"
+                docker rm -f pgsqldb
+                
+                echo "     ==> OK"
+            """.trimIndent()
+        }
+    }
+
+    features {
+        golang {
+            enabled = true
+            testFormat = "json"
+        }
+    }
+}
+)
+
 // First Hops based on https://blog.jetbrains.com/teamcity/2019/03/configuration-as-code-part-1-getting-started-with-kotlin-dsl/
 /*
 object PetClinicVcs : GitVcsRoot({
