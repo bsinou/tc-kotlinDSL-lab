@@ -95,8 +95,6 @@ class SqlLiteUnitTests() : BuildType({
 
         param("env.GOROOT", goRoot)
 
-        // Skip default storages during the tests
-        param("env.CELLS_TEST_SKIP_SQLITE", "false")
         // (no bolt / no bleve)
         // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
 
