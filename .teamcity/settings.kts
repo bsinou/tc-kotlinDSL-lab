@@ -32,6 +32,9 @@ To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
 // version indicates the TeamCity DSL version. In Nov 2024, with TC 2024.07.3, this is the supported version:
 version = "2024.03"
 
+val jsonLog = "false"
+val goRoot =  "/usr/local/go22"
+
 // List of MySql Docker images to test
 val mySqlImageTags: ArrayList<String>
     get() = arrayListOf(
@@ -74,6 +77,77 @@ project {
 
 }
 
+// Define the tests with the default SQL Lite DB
+class SqlLiteUnitTests(imgTag: String) : BuildType({
+    id("TestUnit_SQLite".toId())
+    name = "SQL Unit Tests with SQLite"
+
+    description = "Perform the tests against the default SQLite"
+    maxRunningBuilds = 1
+
+    vcs {
+        root(AbsoluteId("Build_CellsHomeNext"))
+    }
+
+    params {
+
+        param("env.GOROOT", goRoot)
+
+        // Skip default storages during the tests
+        param("env.CELLS_TEST_SKIP_SQLITE", "false")
+        // (no bolt / no bleve)
+        // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
+
+        param("RUN_PACKAGES", runPackages)
+        param("RUN_LOG_JSON", jsonLog)
+        param("RUN_TAGS", "storage")
+        param("RUN_SINGLE_TEST_PATTERN", "")
+    }
+
+    steps {
+
+        script {
+            name = "Run Tests"
+            id = "Run_Tests"
+            scriptContent = """
+                echo "... Launching TC Build from Kotlin DSL"
+                               
+                echo "... Listing test ENV:"
+                printenv | grep CELLS_TEST
+                
+                export PATH=${'$'}GOROOT/bin:${'$'}PATH
+                export GOFLAGS="-count=1 -tags=%RUN_TAGS%"
+                
+                # Base argument for this build
+                args="-v"
+                
+                if [ "true" = "%RUN_LOG_JSON%"  ]; then
+                   # Integrate with TC by using json output
+                   args="${'$'}{args} -json"
+                fi
+                
+                if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
+                	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
+                fi
+                
+                echo "... Launch command:"
+                echo "go test %RUN_PACKAGES% ${'$'}{args}"
+                
+                go test %RUN_PACKAGES% ${'$'}{args} 
+            """.trimIndent()
+        }
+    }
+
+    features {
+        golang {
+            enabled = true
+            testFormat = "json"
+        }
+    }
+}
+)
+
+
 // Define a "dynamic" build config for MySQL Unit tests
 class MySqlUnitTests(imgTag: String) : BuildType({
     id("TestUnit_${imgTag}".toId())
@@ -87,13 +161,15 @@ class MySqlUnitTests(imgTag: String) : BuildType({
     }
 
     params {
+        param("env.GOROOT", goRoot)
+
         // Skip default storages during the tests
         param("env.CELLS_TEST_SKIP_SQLITE", "true")
         // (no bolt / no bleve)
         // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
 
         param("RUN_PACKAGES", runPackages)
-        param("RUN_LOG_JSON", "false")
+        param("RUN_LOG_JSON", jsonLog)
         param("RUN_TAGS", "storage")
         param("RUN_SINGLE_TEST_PATTERN", "")
     }
@@ -150,7 +226,6 @@ class MySqlUnitTests(imgTag: String) : BuildType({
                 echo "... Listing test ENV:"
                 printenv | grep CELLS_TEST
                 
-                export GOROOT=/usr/local/go22
                 export PATH=${'$'}GOROOT/bin:${'$'}PATH
                 export GOFLAGS="-count=1 -tags=%RUN_TAGS%"
                 
@@ -207,13 +282,16 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
     }
 
     params {
+
+        param("env.GOROOT", goRoot)
+
         // Skip default storages during the tests
         param("env.CELLS_TEST_SKIP_SQLITE", "true")
         // (no bolt / no bleve)
         // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
 
         param("RUN_PACKAGES", runPackages)
-        param("RUN_LOG_JSON", "true")
+        param("RUN_LOG_JSON", jsonLog)
         param("RUN_TAGS", "storage")
         param("RUN_SINGLE_TEST_PATTERN", "")
     }
@@ -264,7 +342,6 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
                 echo "... Listing test ENV:"
                 printenv | grep CELLS_TEST
                 
-                export GOROOT=/usr/local/go22
                 export PATH=${'$'}GOROOT/bin:${'$'}PATH
                 export GOFLAGS="-count=1 -tags=%RUN_TAGS%"
                 
