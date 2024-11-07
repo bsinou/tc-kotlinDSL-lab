@@ -67,6 +67,8 @@ project {
 
     description = "Cells V5 Unit Tests for SQL DB"
 
+    buildType(SqlLiteUnitTests())
+
     for (imgTag in mySqlImageTags) {
         buildType(MySqlUnitTests(imgTag))
     }
@@ -78,7 +80,7 @@ project {
 }
 
 // Define the tests with the default SQL Lite DB
-class SqlLiteUnitTests(imgTag: String) : BuildType({
+class SqlLiteUnitTests() : BuildType({
     id("TestUnit_SQLite".toId())
     name = "SQL Unit Tests with SQLite"
 
