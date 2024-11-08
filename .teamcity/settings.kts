@@ -69,12 +69,12 @@ project {
 
     buildType(SqlLiteUnitTests())
 
-    subProject(MySQLTests)
+    subProject(MySQLTests())
 
-    subProject(PGSQLTests)
+    subProject(PGSQLTests())
 }
 
-object MySQLTests : Project({
+class MySQLTests : Project({
     id = AbsoluteId("unit_sql_tests")
     name = "My Sql Tests"
     description = "Cells V5 Unit Tests for SQL DB"
@@ -84,7 +84,7 @@ object MySQLTests : Project({
     }
 })
 
-object PGSQLTests : Project({
+class PGSQLTests : Project({
     id = AbsoluteId("unit_sql_tests_pgsql")
     name = "Postgre Sql Tests"
     description = "Cells V5 Unit Tests for PG SQL DB"
