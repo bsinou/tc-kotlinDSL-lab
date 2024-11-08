@@ -75,8 +75,8 @@ project {
 }
 
 object MySQLTests : Project({
+    id = AbsoluteId("unit_sql_tests")
     name = "My Sql Tests"
-
     description = "Cells V5 Unit Tests for SQL DB"
 
     for (imgTag in mySqlImageTags) {
@@ -85,8 +85,8 @@ object MySQLTests : Project({
 })
 
 object PGSQLTests : Project({
+    id = AbsoluteId("unit_sql_tests_pgsql")
     name = "Postgre Sql Tests"
-
     description = "Cells V5 Unit Tests for PG SQL DB"
 
     for (imgTag in pgSqlImageTags) {
