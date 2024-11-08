@@ -33,7 +33,7 @@ To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
 version = "2024.03"
 
 val jsonLog = "false"
-val goRoot =  "/usr/local/go22"
+val goRoot =  "/usr/local/go23"
 
 // List of MySql Docker images to test
 val mySqlImageTags: ArrayList<String>
@@ -88,7 +88,10 @@ class SqlLiteUnitTests() : BuildType({
     maxRunningBuilds = 1
 
     vcs {
-        root(AbsoluteId("Build_CellsHomeNext"))
+        root(
+            AbsoluteId("Build_CellsHomeNext"),
+            ". => cells/",
+            )
     }
 
     params {
