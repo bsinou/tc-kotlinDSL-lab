@@ -65,19 +65,34 @@ val runPackages = "./idm/... ./broker/... ./data/... ./scheduler/... ./common/st
 // In that block, we compose the structure of the project.
 project {
 
-    description = "Cells V5 Unit Tests for SQL DB"
+    name = "Unit Test Matrix"
 
     buildType(SqlLiteUnitTests())
+
+    subProject(MySQLTests)
+
+    subProject(PGSQLTests)
+}
+
+object MySQLTests : Project({
+    name = "My Sql Tests"
+
+    description = "Cells V5 Unit Tests for SQL DB"
 
     for (imgTag in mySqlImageTags) {
         buildType(MySqlUnitTests(imgTag))
     }
+})
+
+object PGSQLTests : Project({
+    name = "Postgre Sql Tests"
+
+    description = "Cells V5 Unit Tests for PG SQL DB"
 
     for (imgTag in pgSqlImageTags) {
         buildType(PgSqlUnitTests(imgTag))
     }
-
-}
+})
 
 // Define the tests with the default SQL Lite DB
 class SqlLiteUnitTests() : BuildType({
@@ -133,7 +148,9 @@ class SqlLiteUnitTests() : BuildType({
                 	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
                 fi
                 
-                echo "... Launch command:"
+                cd ./cells
+                echo "... Launch command in ${'$'}(pwd):"
+                
                 echo "go test %RUN_PACKAGES% ${'$'}{args}"
                 
                 go test %RUN_PACKAGES% ${'$'}{args} 
