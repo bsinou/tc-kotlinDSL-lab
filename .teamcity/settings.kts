@@ -32,7 +32,7 @@ To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
 // version indicates the TeamCity DSL version. In Nov 2024, with TC 2024.07.3, this is the supported version:
 version = "2024.03"
 
-val jsonLog = "false"
+val jsonLog = "true"
 val goRoot =  "/usr/local/go23"
 
 // List of MySql Docker images to test
@@ -64,8 +64,6 @@ val runPackages = "./idm/... ./broker/... ./data/... ./scheduler/... ./common/st
 // It is a function call, which takes as a parameter a block that represents the entire TeamCity project.
 // In that block, we compose the structure of the project.
 project {
-
-    // name = "Unit Test Matrix"
 
     buildType(SqlLiteUnitTests())
 
@@ -216,7 +214,7 @@ class MySqlUnitTests(imgTag: String) : BuildType({
             name = "Wait for container"
             id = "wait_before_run"
             scriptContent = """               
-                echo "...  Wait 60 second to insure that the container is correctly started"
+                echo "...  Wait 60 second to ensure that the container is correctly started"
                 sleep 60
                 echo "     ==> Done sleeping"
             """.trimIndent()
@@ -338,7 +336,7 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
             name = "Wait for container"
             id = "wait_before_run"
             scriptContent = """               
-                echo "...  Wait 60 second to insure that the container is correctly started"
+                echo "...  Wait 60 second to ensure that the container is correctly started"
                 sleep 60
                 echo "     ==> Done sleeping"
             """.trimIndent()
