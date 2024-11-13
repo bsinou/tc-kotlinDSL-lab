@@ -65,7 +65,7 @@ val runPackages = "./idm/... ./broker/... ./data/... ./scheduler/... ./common/st
 // In that block, we compose the structure of the project.
 project {
 
-    name = "Unit Test Matrix"
+    // name = "Unit Test Matrix"
 
     buildType(SqlLiteUnitTests())
 
