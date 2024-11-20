@@ -65,7 +65,6 @@ val defaultMySQlRun = """
                 echo "... Launch command in ${'$'}(pwd):"
                 echo "go test %RUN_PACKAGES% ${'$'}{args}"
                 go test %RUN_PACKAGES% ${'$'}{args} 
-
             """.trimIndent()
 
 // Define the build configurations
@@ -130,7 +129,8 @@ class SqlLiteUnitTests : BuildType({
             id = "Run_Tests"
             scriptContent = """
                 echo "... Launching TC Build from Kotlin DSL"
-                """ + defaultMySQlRun
+                $defaultMySQlRun
+                """
         }
     }
 
