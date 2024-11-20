@@ -1,11 +1,6 @@
 import jetbrains.buildServer.configs.kotlin.*
-import jetbrains.buildServer.configs.kotlin.buildFeatures.perfmon
-import jetbrains.buildServer.configs.kotlin.buildFeatures.swabra
 import jetbrains.buildServer.configs.kotlin.buildFeatures.golang
-import jetbrains.buildServer.configs.kotlin.buildSteps.maven
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
-import jetbrains.buildServer.configs.kotlin.triggers.vcs
-import jetbrains.buildServer.configs.kotlin.vcs.GitVcsRoot
 
 /*
 The settings script is an entry point for defining a TeamCity
@@ -93,7 +88,7 @@ class PGSQLTests : Project({
 })
 
 // Define the tests with the default SQL Lite DB
-class SqlLiteUnitTests() : BuildType({
+class SqlLiteUnitTests : BuildType({
     id("TestUnit_SQLite".toId())
     name = "SQL Unit Tests with SQLite"
 
@@ -165,7 +160,6 @@ class SqlLiteUnitTests() : BuildType({
 }
 )
 
-
 // Define a "dynamic" build config for MySQL Unit tests
 class MySqlUnitTests(imgTag: String) : BuildType({
     id("TestUnit_${imgTag}".toId())
@@ -217,6 +211,9 @@ class MySqlUnitTests(imgTag: String) : BuildType({
                 echo "...  Wait 60 second to ensure that the container is correctly started"
                 sleep 60
                 echo "     ==> Done sleeping"
+                echo ""
+                echo "... Exposing container logs for further verificaion"
+                docker logs mysqldb
             """.trimIndent()
         }
 
@@ -402,54 +399,3 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
     }
 }
 )
-
-// First Hops based on https://blog.jetbrains.com/teamcity/2019/03/configuration-as-code-part-1-getting-started-with-kotlin-dsl/
-/*
-object PetClinicVcs : GitVcsRoot({
-    name = "https://github.com/spring-projects/spring-petclinic#refs/heads/main"
-    url = "https://github.com/spring-projects/spring-petclinic"
-    branch = "refs/heads/main"
-    branchSpec = "refs/heads/*"
-    authMethod = password {
-        userName = "bsinou"
-        password = "credentialsJSON:4cf4a333-b1fa-43c7-abd1-3209a0a24c51"
-    }
-})
-
-object MavenBuildPoc : BuildType({
-    name = "Maven Build PoC"
-
-    vcs {
-        root(PetClinicVcs)
-    }
-
-    steps {
-        script {
-            name = "Test Command Line"
-            scriptContent = """
-                echo %build.number%
-                echo "Another command"
-                echo "Yet another command"
-            """.trimIndent()
-            scriptContent = "echo %build.number%"
-        }
-        maven {
-            name = "Maven Build"
-            id = "Maven2"
-            goals = "clean test"
-            runnerArgs = "-Dmaven.test.failure.ignore=true"
-        }
-    }
-
-    triggers {
-        vcs {
-        }
-    }
-
-    features {
-        perfmon {
-        }
-        swabra { }
-    }
-})
-*/
