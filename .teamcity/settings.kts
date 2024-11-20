@@ -35,54 +35,57 @@ val pgSqlImageTags: ArrayList<String>
 
 val runPackages = "./idm/... ./broker/... ./data/... ./scheduler/... ./common/storage/sql/..."
 
-val defaultSqlRun = """echo "... Listing test ENV:"
-                printenv | grep CELLS_TEST
-                
-                export PATH=${'$'}GOROOT/bin:${'$'}PATH
-                
-                go_flags="-count=1 -tags=%RUN_TAGS%"
-                if [ "true" = "%RUN_LOG_JSON%"  ]; then
-                   # Integrate with TC by using json output
-                   go_flags="${'$'}{go_flags} -json"
-                fi
-                export GOFLAGS="${'$'}{go_flags}"
-
-                # Base argument for this build
-                args="-v"
-                
-                if [ ! "true" = "%RUN_LONG%"  ]; then
-                   args="${'$'}{args} -test.short"
-                fi        
-                if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
-                	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
-                fi
-                
-                cd ./cells
-                echo "... Launch command in ${'$'}(pwd):"
-                echo "go test %RUN_PACKAGES% ${'$'}{args}"
-                go test %RUN_PACKAGES% ${'$'}{args} 
-            """.trimIndent()
+val defaultSqlRun = """
+    echo "... Listing test ENV:"
+    printenv | grep CELLS_TEST
+    
+    export PATH=${'$'}GOROOT/bin:${'$'}PATH
+    
+    go_flags="-count=1 -tags=%RUN_TAGS%"
+    if [ "true" = "%RUN_LOG_JSON%"  ]; then
+       # Integrate with TC by using json output
+       go_flags="${'$'}{go_flags} -json"
+    fi
+    export GOFLAGS="${'$'}{go_flags}"
+    
+    # Base argument for this build
+    args="-v"
+    
+    if [ ! "true" = "%RUN_LONG%"  ]; then
+       args="${'$'}{args} -test.short"
+    fi        
+    if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
+    	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
+    fi
+    
+    cd ./cells
+    echo "... Launch command in ${'$'}(pwd):"
+    echo "go test %RUN_PACKAGES% ${'$'}{args}"
+    go test %RUN_PACKAGES% ${'$'}{args} 
+""".trimIndent()
 
 val waitAndLog = """               
-                echo "...  Wait 60 second to ensure that the container is correctly started"
-                sleep 60
-                echo "     ==> Done sleeping"
-                echo ""
-                echo "... Exposing container logs for further verification"
-                docker logs sqldb
-            """.trimIndent()
+    echo "...  Wait 60 second to ensure that the container is correctly started"
+    sleep 60
+    echo "     ==> Done sleeping"
+    echo ""
+    echo "... Exposing container logs for further verification"
+    docker logs sqldb
+""".trimIndent()
 
 val cleanAfterTest = """
-                echo "... Trying to force remove all containers"
-                echo "     => will throw Warning for containers that have *not* been started"
-                docker rm -f sqldb
-                echo "     ==> OK"
-            """.trimIndent()
+    echo "... Trying to force remove all containers"
+    echo "     => will throw Warning for containers that have *not* been started"
+    docker rm -f sqldb
+    echo "     ==> OK"
+""".trimIndent()
+
 // Define the build configurations
 // `project()` is the main entry point to the configuration script.
 // It is a function call, which takes as a parameter a block that represents the entire TeamCity project.
 // In that block, we compose the structure of the project.
 project {
+
     params {
         param("env.GOROOT", goRoot)
         param("RUN_LOG_JSON", jsonLog)
@@ -246,7 +249,10 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
     maxRunningBuilds = 1
 
     vcs {
-        root(AbsoluteId("Build_CellsHomeNext"))
+        root(
+            AbsoluteId("Build_CellsHomeNext"),
+            ". => cells/",
+        )
     }
 
     params {
@@ -291,9 +297,10 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
         	    dbdsn="postgres://${'$'}{username}:${'$'}{password}@${'$'}{host}:${'$'}{port}/${'$'}{dbname}?sslmode=disable"
         	    echo "... PGSQL DB URL: ${'$'}dbdsn"
         	    export CELLS_TEST_PGSQL_DSN="${'$'}dbdsn"
-            
-            """.trimIndent() + defaultSqlRun
+                $defaultSqlRun
+            """.trimIndent()
         }
+
         script {
             name = "Clean after tests"
             id = "Clean_after_tests"
@@ -314,10 +321,8 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
 class BoltBleveUnitTests : BuildType({
     id("TestUnit_BoltBleve".toId())
 
-    // FIXME
-    name = "SQL Unit Tests with SQLite"
-
-    description = "Perform the tests against the default SQLite"
+    name = "Index Unit Tests with default DB"
+    description = "Perform the tests against the default Bolt and Bleve KVStores"
     maxRunningBuilds = 1
 
     vcs {
@@ -328,26 +333,20 @@ class BoltBleveUnitTests : BuildType({
     }
 
     params {
-        param("env.GOROOT", goRoot)
-        param("RUN_LOG_JSON", jsonLog)
         // (no bolt / no bleve)
         // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
-
-        param("RUN_PACKAGES", runPackages)
-        param("RUN_LONG", runLong.toString())
-        param("RUN_TAGS", "storage")
-        param("RUN_SINGLE_TEST_PATTERN", "")
+        // param("RUN_PACKAGES", runPackages)
     }
 
     steps {
-
         script {
             name = "Run Tests"
             id = "Run_Tests"
             scriptContent = """
+            
                 echo "... Launching TC Build from Kotlin DSL"
-                            
-                """ + defaultSqlRun
+                $defaultSqlRun            
+            """.trimIndent()
         }
     }
 
