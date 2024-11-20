@@ -31,13 +31,12 @@ val pgSqlImageTags: ArrayList<String>
         "postgres:15.8",
     )
 
-// Debian Bulleyes might be to violent for our test agents.
+// Debian Bulleyes might be too violent for our test agents.
 // "postgres:bulleyes",
 
 val runPackages = "./idm/... ./broker/... ./data/... ./scheduler/... ./common/storage/sql/..."
 
-val defaultMySQlRun = """
-                echo "... Listing test ENV:"
+val defaultMySQlRun = """echo "... Listing test ENV:"
                 printenv | grep CELLS_TEST
                 
                 export PATH=${'$'}GOROOT/bin:${'$'}PATH
@@ -49,14 +48,12 @@ val defaultMySQlRun = """
                 fi
                 export GOFLAGS="${'$'}{go_flags}"
 
-                
                 # Base argument for this build
                 args="-v"
                 
                 if [ ! "true" = "%RUN_LONG%"  ]; then
                    args="${'$'}{args} -test.short"
                 fi        
-                
                 if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
                 	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
                 fi
@@ -72,6 +69,16 @@ val defaultMySQlRun = """
 // It is a function call, which takes as a parameter a block that represents the entire TeamCity project.
 // In that block, we compose the structure of the project.
 project {
+    params {
+        param("env.GOROOT", goRoot)
+        param("RUN_LOG_JSON", jsonLog)
+
+        param("RUN_PACKAGES", runPackages)
+        param("RUN_LONG", runLong.toString())
+        param("RUN_TAGS", "storage")
+        param("RUN_SINGLE_TEST_PATTERN", "")
+    }
+
     buildType(SqlLiteUnitTests())
 
     subProject(MySQLTests())
@@ -111,16 +118,6 @@ class SqlLiteUnitTests : BuildType({
             AbsoluteId("Build_CellsHomeNext"),
             ". => cells/",
             )
-    }
-
-    params {
-        param("env.GOROOT", goRoot)
-        param("RUN_LOG_JSON", jsonLog)
-
-        param("RUN_PACKAGES", runPackages)
-        param("RUN_LONG", runLong.toString())
-        param("RUN_TAGS", "storage")
-        param("RUN_SINGLE_TEST_PATTERN", "")
     }
 
     steps {
