@@ -2,28 +2,6 @@ import jetbrains.buildServer.configs.kotlin.*
 import jetbrains.buildServer.configs.kotlin.buildFeatures.golang
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 
-/*
-The settings script is an entry point for defining a TeamCity
-project hierarchy. The script should contain a single call to the
-project() function with a Project instance or an init function as
-an argument.
-
-VcsRoots, BuildTypes, Templates, and subprojects can be
-registered inside the project using the vcsRoot(), buildType(),
-template(), and subProject() methods respectively.
-
-To debug settings scripts in command-line, run the
-
-    mvnDebug org.jetbrains.teamcity:teamcity-configs-maven-plugin:generate
-
-command and attach your debugger to the port 8000.
-
-To debug in IntelliJ Idea, open the 'Maven Projects' tool window (View
--> Tool Windows -> Maven Projects), find the generate task node
-(Plugins -> teamcity-configs -> teamcity-configs:generate), the
-'Debug' option is available in the context menu for the task.
-*/
-
 // version indicates the TeamCity DSL version. In Nov 2024, with TC 2024.07.3, this is the supported version:
 version = "2024.03"
 
@@ -48,14 +26,47 @@ val mySqlImageTags: ArrayList<String>
 val pgSqlImageTags: ArrayList<String>
     get() = arrayListOf(
         "postgres:latest",
-        // bulleyes might be to violent for our test agents.
-        // "postgres:bulleyes",
         "postgres:alpine",
         "postgres:16.4",
         "postgres:15.8",
     )
 
+// Debian Bulleyes might be to violent for our test agents.
+// "postgres:bulleyes",
+
 val runPackages = "./idm/... ./broker/... ./data/... ./scheduler/... ./common/storage/sql/..."
+
+val defaultMySQlRun = """
+                echo "... Listing test ENV:"
+                printenv | grep CELLS_TEST
+                
+                export PATH=${'$'}GOROOT/bin:${'$'}PATH
+                
+                go_flags="-count=1 -tags=%RUN_TAGS%"
+                if [ "true" = "%RUN_LOG_JSON%"  ]; then
+                   # Integrate with TC by using json output
+                   go_flags="${'$'}{go_flags} -json"
+                fi
+                export GOFLAGS="${'$'}{go_flags}"
+
+                
+                # Base argument for this build
+                args="-v"
+                
+                if [ ! "true" = "%RUN_LONG%"  ]; then
+                   args="${'$'}{args} -test.short"
+                fi        
+                
+                if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
+                	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
+                fi
+                
+                cd ./cells
+                echo "... Launch command in ${'$'}(pwd):"
+                echo "go test %RUN_PACKAGES% ${'$'}{args}"
+                go test %RUN_PACKAGES% ${'$'}{args} 
+
+            """.trimIndent()
 
 // Define the build configurations
 // `project()` is the main entry point to the configuration script.
@@ -93,7 +104,6 @@ class PGSQLTests : Project({
 class SqlLiteUnitTests : BuildType({
     id("TestUnit_SQLite".toId())
     name = "SQL Unit Tests with SQLite"
-
     description = "Perform the tests against the default SQLite"
     maxRunningBuilds = 1
 
@@ -107,8 +117,6 @@ class SqlLiteUnitTests : BuildType({
     params {
         param("env.GOROOT", goRoot)
         param("RUN_LOG_JSON", jsonLog)
-        // (no bolt / no bleve)
-        // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
 
         param("RUN_PACKAGES", runPackages)
         param("RUN_LONG", runLong.toString())
@@ -117,48 +125,12 @@ class SqlLiteUnitTests : BuildType({
     }
 
     steps {
-
         script {
             name = "Run Tests"
             id = "Run_Tests"
             scriptContent = """
                 echo "... Launching TC Build from Kotlin DSL"
-                            
                 """ + defaultMySQlRun
-
-  /*
-                echo "... Listing test ENV:"
-                printenv | grep CELLS_TEST
-
-                export PATH=${'$'}GOROOT/bin:${'$'}PATH
-
-                go_flags="-count=1 -tags=%RUN_TAGS%"
-                if [ "true" = "%RUN_LOG_JSON%"  ]; then
-                   # Integrate with TC by using json output
-                   go_flags="${'$'}{go_flags} -json"
-                fi
-
-                export GOFLAGS="${'$'}{go_flags}"
-
-                # Base argument for this build
-                args="-v"
-
-                if [ ! "true" = "%RUN_LONG%"  ]; then
-                   args="${'$'}{args} -test.short"
-                fi
-
-                if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
-                	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
-                fi
-
-                cd ./cells
-                echo "... Launch command in ${'$'}(pwd):"
-
-                echo "go test %RUN_PACKAGES% ${'$'}{args}"
-
-                go test %RUN_PACKAGES% ${'$'}{args}
-            """.trimIndent()
-                */
         }
     }
 
@@ -286,19 +258,14 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
     }
 
     params {
-
         param("env.GOROOT", goRoot)
-
-        // Skip default storages during the tests
-        param("env.CELLS_TEST_SKIP_SQLITE", "true")
-        // (no bolt / no bleve)
-        // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
-
-        param("RUN_LONG", runLong.toString())
-        param("RUN_PACKAGES", runPackages)
         param("RUN_LOG_JSON", jsonLog)
+
+        param("RUN_PACKAGES", runPackages)
         param("RUN_TAGS", "storage")
+        param("RUN_LONG", runLong.toString())
         param("RUN_SINGLE_TEST_PATTERN", "")
+        param("env.CELLS_TEST_SKIP_SQLITE", "true")
     }
 
     steps {
@@ -345,30 +312,6 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
         	    export CELLS_TEST_PGSQL_DSN="${'$'}dbdsn"
             
             """.trimIndent() + defaultMySQlRun
-
-//                echo "... Listing test ENV:"
-//                printenv | grep CELLS_TEST
-//
-//                export PATH=${'$'}GOROOT/bin:${'$'}PATH
-//                export GOFLAGS="-count=1 -tags=%RUN_TAGS%"
-//
-//                # Base argument for this build
-//                args="-v"
-//
-//                if [ "true" = "%RUN_LOG_JSON%"  ]; then
-//                   # Integrate with TC by using json output
-//                   args="${'$'}{args} -json"
-//                fi
-//
-//                if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
-//                	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
-//                fi
-//
-//                echo "... Launch command:"
-//                echo "go test %RUN_PACKAGES% ${'$'}{args}"
-//
-//                go test %RUN_PACKAGES% ${'$'}{args}
-//            """.trimIndent()
         }
         script {
             name = "Clean after tests"
@@ -392,35 +335,52 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
 }
 )
 
+// Define the tests with the default SQL Lite DB
+class BoltBleveUnitTests : BuildType({
+    id("TestUnit_BoltBleve".toId())
 
-val defaultMySQlRun = """
-                echo "... Listing test ENV:"
-                printenv | grep CELLS_TEST
-                
-                export PATH=${'$'}GOROOT/bin:${'$'}PATH
-                
-                go_flags="-count=1 -tags=%RUN_TAGS%"
-                if [ "true" = "%RUN_LOG_JSON%"  ]; then
-                   # Integrate with TC by using json output
-                   go_flags="${'$'}{go_flags} -json"
-                fi
-                export GOFLAGS="${'$'}{go_flags}"
+    // FIXME
+    name = "SQL Unit Tests with SQLite"
 
-                
-                # Base argument for this build
-                args="-v"
-                
-                if [ ! "true" = "%RUN_LONG%"  ]; then
-                   args="${'$'}{args} -test.short"
-                fi        
-                
-                if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
-                	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
-                fi
-                
-                cd ./cells
-                echo "... Launch command in ${'$'}(pwd):"
-                echo "go test %RUN_PACKAGES% ${'$'}{args}"
-                go test %RUN_PACKAGES% ${'$'}{args} 
+    description = "Perform the tests against the default SQLite"
+    maxRunningBuilds = 1
 
-            """.trimIndent()
+    vcs {
+        root(
+            AbsoluteId("Build_CellsHomeNext"),
+            ". => cells/",
+        )
+    }
+
+    params {
+        param("env.GOROOT", goRoot)
+        param("RUN_LOG_JSON", jsonLog)
+        // (no bolt / no bleve)
+        // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
+
+        param("RUN_PACKAGES", runPackages)
+        param("RUN_LONG", runLong.toString())
+        param("RUN_TAGS", "storage")
+        param("RUN_SINGLE_TEST_PATTERN", "")
+    }
+
+    steps {
+
+        script {
+            name = "Run Tests"
+            id = "Run_Tests"
+            scriptContent = """
+                echo "... Launching TC Build from Kotlin DSL"
+                            
+                """ + defaultMySQlRun
+        }
+    }
+
+    features {
+        golang {
+            enabled = true
+            testFormat = "json"
+        }
+    }
+}
+)
