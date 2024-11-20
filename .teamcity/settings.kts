@@ -123,10 +123,13 @@ class SqlLiteUnitTests : BuildType({
             id = "Run_Tests"
             scriptContent = """
                 echo "... Launching TC Build from Kotlin DSL"
-                               
+                            
+                """ + defaultMySQlRun
+
+  /*
                 echo "... Listing test ENV:"
                 printenv | grep CELLS_TEST
-                
+
                 export PATH=${'$'}GOROOT/bin:${'$'}PATH
 
                 go_flags="-count=1 -tags=%RUN_TAGS%"
@@ -136,25 +139,26 @@ class SqlLiteUnitTests : BuildType({
                 fi
 
                 export GOFLAGS="${'$'}{go_flags}"
-                
+
                 # Base argument for this build
                 args="-v"
-                
+
                 if [ ! "true" = "%RUN_LONG%"  ]; then
                    args="${'$'}{args} -test.short"
-                fi              
-                
+                fi
+
                 if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
                 	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
                 fi
-                
+
                 cd ./cells
                 echo "... Launch command in ${'$'}(pwd):"
-                
+
                 echo "go test %RUN_PACKAGES% ${'$'}{args}"
-                
-                go test %RUN_PACKAGES% ${'$'}{args} 
+
+                go test %RUN_PACKAGES% ${'$'}{args}
             """.trimIndent()
+                */
         }
     }
 
@@ -245,37 +249,7 @@ class MySqlUnitTests(imgTag: String) : BuildType({
                 mysql_urls="${'$'}dburl"
                 
                 export CELLS_TEST_MYSQL_DSN="${'$'}mysql_urls"
-               """ + """
-                echo "... Listing test ENV:"
-                printenv | grep CELLS_TEST
-                
-                export PATH=${'$'}GOROOT/bin:${'$'}PATH
-                
-                go_flags="-count=1 -tags=%RUN_TAGS%"
-                if [ "true" = "%RUN_LOG_JSON%"  ]; then
-                   # Integrate with TC by using json output
-                   go_flags="${'$'}{go_flags} -json"
-                fi
-                export GOFLAGS="${'$'}{go_flags}"
-
-                
-                # Base argument for this build
-                args="-v"
-                
-                if [ ! "true" = "%RUN_LONG%"  ]; then
-                   args="${'$'}{args} -test.short"
-                fi        
-                
-                if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
-                	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
-                fi
-                
-                cd ./cells
-                echo "... Launch command in ${'$'}(pwd):"
-                echo "go test %RUN_PACKAGES% ${'$'}{args}"
-                go test %RUN_PACKAGES% ${'$'}{args} 
-
-            """.trimIndent()
+               """ + defaultMySQlRun
         }
         script {
             name = "Clean after tests"
@@ -369,30 +343,32 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
         	    dbdsn="postgres://${'$'}{username}:${'$'}{password}@${'$'}{host}:${'$'}{port}/${'$'}{dbname}?sslmode=disable"
         	    echo "... PGSQL DB URL: ${'$'}dbdsn"
         	    export CELLS_TEST_PGSQL_DSN="${'$'}dbdsn"
-                               
-                echo "... Listing test ENV:"
-                printenv | grep CELLS_TEST
-                
-                export PATH=${'$'}GOROOT/bin:${'$'}PATH
-                export GOFLAGS="-count=1 -tags=%RUN_TAGS%"
-                
-                # Base argument for this build
-                args="-v"
-                
-                if [ "true" = "%RUN_LOG_JSON%"  ]; then
-                   # Integrate with TC by using json output
-                   args="${'$'}{args} -json"
-                fi
-                
-                if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
-                	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
-                fi
-                
-                echo "... Launch command:"
-                echo "go test %RUN_PACKAGES% ${'$'}{args}"
-                
-                go test %RUN_PACKAGES% ${'$'}{args} 
-            """.trimIndent()
+            
+            """.trimIndent() + defaultMySQlRun
+
+//                echo "... Listing test ENV:"
+//                printenv | grep CELLS_TEST
+//
+//                export PATH=${'$'}GOROOT/bin:${'$'}PATH
+//                export GOFLAGS="-count=1 -tags=%RUN_TAGS%"
+//
+//                # Base argument for this build
+//                args="-v"
+//
+//                if [ "true" = "%RUN_LOG_JSON%"  ]; then
+//                   # Integrate with TC by using json output
+//                   args="${'$'}{args} -json"
+//                fi
+//
+//                if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
+//                	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
+//                fi
+//
+//                echo "... Launch command:"
+//                echo "go test %RUN_PACKAGES% ${'$'}{args}"
+//
+//                go test %RUN_PACKAGES% ${'$'}{args}
+//            """.trimIndent()
         }
         script {
             name = "Clean after tests"
@@ -415,3 +391,36 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
     }
 }
 )
+
+
+val defaultMySQlRun = """
+                echo "... Listing test ENV:"
+                printenv | grep CELLS_TEST
+                
+                export PATH=${'$'}GOROOT/bin:${'$'}PATH
+                
+                go_flags="-count=1 -tags=%RUN_TAGS%"
+                if [ "true" = "%RUN_LOG_JSON%"  ]; then
+                   # Integrate with TC by using json output
+                   go_flags="${'$'}{go_flags} -json"
+                fi
+                export GOFLAGS="${'$'}{go_flags}"
+
+                
+                # Base argument for this build
+                args="-v"
+                
+                if [ ! "true" = "%RUN_LONG%"  ]; then
+                   args="${'$'}{args} -test.short"
+                fi        
+                
+                if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
+                	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
+                fi
+                
+                cd ./cells
+                echo "... Launch command in ${'$'}(pwd):"
+                echo "go test %RUN_PACKAGES% ${'$'}{args}"
+                go test %RUN_PACKAGES% ${'$'}{args} 
+
+            """.trimIndent()
