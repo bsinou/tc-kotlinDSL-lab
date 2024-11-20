@@ -9,7 +9,6 @@ val jsonLog = "true"
 val goRoot =  "/usr/local/go23"
 val runLong = false
 
-
 // List of MySql Docker images to test
 val mySqlImageTags: ArrayList<String>
     get() = arrayListOf(
@@ -36,7 +35,7 @@ val pgSqlImageTags: ArrayList<String>
 
 val runPackages = "./idm/... ./broker/... ./data/... ./scheduler/... ./common/storage/sql/..."
 
-val defaultMySQlRun = """echo "... Listing test ENV:"
+val defaultSqlRun = """echo "... Listing test ENV:"
                 printenv | grep CELLS_TEST
                 
                 export PATH=${'$'}GOROOT/bin:${'$'}PATH
@@ -64,6 +63,21 @@ val defaultMySQlRun = """echo "... Listing test ENV:"
                 go test %RUN_PACKAGES% ${'$'}{args} 
             """.trimIndent()
 
+val waitAndLog = """               
+                echo "...  Wait 60 second to ensure that the container is correctly started"
+                sleep 60
+                echo "     ==> Done sleeping"
+                echo ""
+                echo "... Exposing container logs for further verification"
+                docker logs sqldb
+            """.trimIndent()
+
+val cleanAfterTest = """
+                echo "... Trying to force remove all containers"
+                echo "     => will throw Warning for containers that have *not* been started"
+                docker rm -f sqldb
+                echo "     ==> OK"
+            """.trimIndent()
 // Define the build configurations
 // `project()` is the main entry point to the configuration script.
 // It is a function call, which takes as a parameter a block that represents the entire TeamCity project.
@@ -126,7 +140,7 @@ class SqlLiteUnitTests : BuildType({
             id = "Run_Tests"
             scriptContent = """
                 echo "... Launching TC Build from Kotlin DSL"
-                $defaultMySQlRun
+                $defaultSqlRun
                 """
         }
     }
@@ -156,13 +170,6 @@ class MySqlUnitTests(imgTag: String) : BuildType({
     }
 
     params {
-        param("env.GOROOT", goRoot)
-        param("RUN_LOG_JSON", jsonLog)
-
-        param("RUN_PACKAGES", runPackages)
-        param("RUN_LONG", runLong.toString())
-        param("RUN_TAGS", "storage")
-        param("RUN_SINGLE_TEST_PATTERN", "")
         // Skip default storages during the tests
         param("env.CELLS_TEST_SKIP_SQLITE", "true")
     }
@@ -172,14 +179,14 @@ class MySqlUnitTests(imgTag: String) : BuildType({
             name = "Relaunch MySQL container"
             id = "relaunch_mysql_container"
             scriptContent = """
-                echo -n "... Force removing existing mysql DB container: "
-                docker rm -f mysqldb
+                echo -n "... Force removing existing sql DB container: "
+                docker rm -f sqldb
                 sleep 2
                 echo "     ==> OK"
                 
                 echo "...  Pull and relaunch a new container"
                 docker pull $imgTag
-                docker run --name mysqldb -p 26999:3306 -e MYSQL_ROOT_PASSWORD=admin -d $imgTag
+                docker run --name sqldb -p 26999:3306 -e MYSQL_ROOT_PASSWORD=admin -d $imgTag
                 sleep 2
                 echo "     ==> OK"
             """.trimIndent()
@@ -188,14 +195,7 @@ class MySqlUnitTests(imgTag: String) : BuildType({
         script {
             name = "Wait for container"
             id = "wait_before_run"
-            scriptContent = """               
-                echo "...  Wait 60 second to ensure that the container is correctly started"
-                sleep 60
-                echo "     ==> Done sleeping"
-                echo ""
-                echo "... Exposing container logs for further verification"
-                docker logs mysqldb
-            """.trimIndent()
+            scriptContent = waitAndLog
         }
 
         script {
@@ -218,18 +218,13 @@ class MySqlUnitTests(imgTag: String) : BuildType({
                 mysql_urls="${'$'}dburl"
                 
                 export CELLS_TEST_MYSQL_DSN="${'$'}mysql_urls"
-               """ + defaultMySQlRun
+                $defaultSqlRun
+               """
         }
         script {
             name = "Clean after tests"
             id = "Clean_after_tests"
-            scriptContent = """
-                echo "... Trying to force remove all containers"
-                echo "     => will throw Warning for containers that have *not* been started"
-                docker rm -f mysqldb
-                
-                echo "     ==> OK"
-            """.trimIndent()
+            scriptContent = cleanAfterTest
         }
     }
 
@@ -255,13 +250,6 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
     }
 
     params {
-        param("env.GOROOT", goRoot)
-        param("RUN_LOG_JSON", jsonLog)
-
-        param("RUN_PACKAGES", runPackages)
-        param("RUN_TAGS", "storage")
-        param("RUN_LONG", runLong.toString())
-        param("RUN_SINGLE_TEST_PATTERN", "")
         param("env.CELLS_TEST_SKIP_SQLITE", "true")
     }
 
@@ -271,13 +259,13 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
             id = "relaunch_pgsql_container"
             scriptContent = """
                 echo -n "... Force removing existing PGSQL DB container: "
-                docker rm -f pgsqldb
+                docker rm -f sqldb
                 sleep 2
                 echo "     ==> OK"
                 
                 echo "...  Pull and relaunch a new container"
                 docker pull $imgTag
-                docker run --name pgsqldb -p 26998:5432 -e POSTGRES_USER=pydio -e POSTGRES_PASSWORD=cells -e POSTGRES_DB=testdb -d $imgTag
+                docker run --name sqldb -p 26998:5432 -e POSTGRES_USER=pydio -e POSTGRES_PASSWORD=cells -e POSTGRES_DB=testdb -d $imgTag
                 sleep 2
                 echo "     ==> OK"
             """.trimIndent()
@@ -286,11 +274,7 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
         script {
             name = "Wait for container"
             id = "wait_before_run"
-            scriptContent = """               
-                echo "...  Wait 60 second to ensure that the container is correctly started"
-                sleep 60
-                echo "     ==> Done sleeping"
-            """.trimIndent()
+            scriptContent = waitAndLog
         }
 
         script {
@@ -308,18 +292,12 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
         	    echo "... PGSQL DB URL: ${'$'}dbdsn"
         	    export CELLS_TEST_PGSQL_DSN="${'$'}dbdsn"
             
-            """.trimIndent() + defaultMySQlRun
+            """.trimIndent() + defaultSqlRun
         }
         script {
             name = "Clean after tests"
             id = "Clean_after_tests"
-            scriptContent = """
-                echo "... Trying to force remove the PGSQL container"
-                echo "     => will throw Warning for containers that have *not* been started"
-                docker rm -f pgsqldb
-                
-                echo "     ==> OK"
-            """.trimIndent()
+            scriptContent = cleanAfterTest
         }
     }
 
@@ -369,7 +347,7 @@ class BoltBleveUnitTests : BuildType({
             scriptContent = """
                 echo "... Launching TC Build from Kotlin DSL"
                             
-                """ + defaultMySQlRun
+                """ + defaultSqlRun
         }
     }
 
