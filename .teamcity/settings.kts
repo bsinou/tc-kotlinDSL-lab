@@ -29,6 +29,8 @@ version = "2024.03"
 
 val jsonLog = "true"
 val goRoot =  "/usr/local/go23"
+val runLong = false
+
 
 // List of MySql Docker images to test
 val mySqlImageTags: ArrayList<String>
@@ -46,7 +48,8 @@ val mySqlImageTags: ArrayList<String>
 val pgSqlImageTags: ArrayList<String>
     get() = arrayListOf(
         "postgres:latest",
-        "postgres:bulleyes",
+        // bulleyes might be to violent for our test agents.
+        // "postgres:bulleyes",
         "postgres:alpine",
         "postgres:16.4",
         "postgres:15.8",
@@ -59,7 +62,6 @@ val runPackages = "./idm/... ./broker/... ./data/... ./scheduler/... ./common/st
 // It is a function call, which takes as a parameter a block that represents the entire TeamCity project.
 // In that block, we compose the structure of the project.
 project {
-
     buildType(SqlLiteUnitTests())
 
     subProject(MySQLTests())
@@ -103,14 +105,13 @@ class SqlLiteUnitTests : BuildType({
     }
 
     params {
-
         param("env.GOROOT", goRoot)
-
+        param("RUN_LOG_JSON", jsonLog)
         // (no bolt / no bleve)
         // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
 
         param("RUN_PACKAGES", runPackages)
-        param("RUN_LOG_JSON", jsonLog)
+        param("RUN_LONG", runLong.toString())
         param("RUN_TAGS", "storage")
         param("RUN_SINGLE_TEST_PATTERN", "")
     }
@@ -127,15 +128,21 @@ class SqlLiteUnitTests : BuildType({
                 printenv | grep CELLS_TEST
                 
                 export PATH=${'$'}GOROOT/bin:${'$'}PATH
-                export GOFLAGS="-count=1 -tags=%RUN_TAGS%"
+
+                go_flags="-count=1 -tags=%RUN_TAGS%"
+                if [ "true" = "%RUN_LOG_JSON%"  ]; then
+                   # Integrate with TC by using json output
+                   go_flags="${'$'}{go_flags} -json"
+                fi
+
+                export GOFLAGS="${'$'}{go_flags}"
                 
                 # Base argument for this build
                 args="-v"
                 
-                if [ "true" = "%RUN_LOG_JSON%"  ]; then
-                   # Integrate with TC by using json output
-                   args="${'$'}{args} -json"
-                fi
+                if [ ! "true" = "%RUN_LONG%"  ]; then
+                   args="${'$'}{args} -test.short"
+                fi              
                 
                 if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
                 	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
@@ -169,21 +176,22 @@ class MySqlUnitTests(imgTag: String) : BuildType({
     maxRunningBuilds = 1
 
     vcs {
-        root(AbsoluteId("Build_CellsHomeNext"))
+        root(
+            AbsoluteId("Build_CellsHomeNext"),
+            ". => cells/",
+        )
     }
 
     params {
         param("env.GOROOT", goRoot)
-
-        // Skip default storages during the tests
-        param("env.CELLS_TEST_SKIP_SQLITE", "true")
-        // (no bolt / no bleve)
-        // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
+        param("RUN_LOG_JSON", jsonLog)
 
         param("RUN_PACKAGES", runPackages)
-        param("RUN_LOG_JSON", jsonLog)
+        param("RUN_LONG", runLong.toString())
         param("RUN_TAGS", "storage")
         param("RUN_SINGLE_TEST_PATTERN", "")
+        // Skip default storages during the tests
+        param("env.CELLS_TEST_SKIP_SQLITE", "true")
     }
 
     steps {
@@ -212,7 +220,7 @@ class MySqlUnitTests(imgTag: String) : BuildType({
                 sleep 60
                 echo "     ==> Done sleeping"
                 echo ""
-                echo "... Exposing container logs for further verificaion"
+                echo "... Exposing container logs for further verification"
                 docker logs mysqldb
             """.trimIndent()
         }
@@ -237,29 +245,36 @@ class MySqlUnitTests(imgTag: String) : BuildType({
                 mysql_urls="${'$'}dburl"
                 
                 export CELLS_TEST_MYSQL_DSN="${'$'}mysql_urls"
-               
+               """ + """
                 echo "... Listing test ENV:"
                 printenv | grep CELLS_TEST
                 
                 export PATH=${'$'}GOROOT/bin:${'$'}PATH
-                export GOFLAGS="-count=1 -tags=%RUN_TAGS%"
+                
+                go_flags="-count=1 -tags=%RUN_TAGS%"
+                if [ "true" = "%RUN_LOG_JSON%"  ]; then
+                   # Integrate with TC by using json output
+                   go_flags="${'$'}{go_flags} -json"
+                fi
+                export GOFLAGS="${'$'}{go_flags}"
+
                 
                 # Base argument for this build
                 args="-v"
                 
-                if [ "true" = "%RUN_LOG_JSON%"  ]; then
-                   # Integrate with TC by using json output
-                   args="${'$'}{args} -json"
-                fi
+                if [ ! "true" = "%RUN_LONG%"  ]; then
+                   args="${'$'}{args} -test.short"
+                fi        
                 
                 if [ ! "xxx" = "xxx%RUN_SINGLE_TEST_PATTERN%"  ]; then
                 	args="${'$'}{args} -run %RUN_SINGLE_TEST_PATTERN%"
                 fi
                 
-                echo "... Launch command:"
+                cd ./cells
+                echo "... Launch command in ${'$'}(pwd):"
                 echo "go test %RUN_PACKAGES% ${'$'}{args}"
-                
                 go test %RUN_PACKAGES% ${'$'}{args} 
+
             """.trimIndent()
         }
         script {
@@ -305,6 +320,7 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
         // (no bolt / no bleve)
         // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
 
+        param("RUN_LONG", runLong.toString())
         param("RUN_PACKAGES", runPackages)
         param("RUN_LOG_JSON", jsonLog)
         param("RUN_TAGS", "storage")
