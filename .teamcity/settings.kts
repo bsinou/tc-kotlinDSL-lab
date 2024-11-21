@@ -9,7 +9,6 @@ val jsonLog = "true"
 val goRoot =  "/usr/local/go23"
 val runLong = false
 
-// List of MySql Docker images to test
 val mySqlImageTags: ArrayList<String>
     get() = arrayListOf(
         "mysql:latest",
@@ -21,7 +20,6 @@ val mySqlImageTags: ArrayList<String>
         "mariadb:10.6",
     )
 
-// List of PgSQL Docker images to test
 val pgSqlImageTags: ArrayList<String>
     get() = arrayListOf(
         "postgres:latest",
@@ -30,7 +28,6 @@ val pgSqlImageTags: ArrayList<String>
         "postgres:15.8",
     )
 
-// List of KVStore Docker images to test
 val kvStoreImageTags: ArrayList<String>
     get() = arrayListOf(
         "mongo:latest",
@@ -92,12 +89,9 @@ fun cleanAfterTest(name: String) : String {
 """.trimIndent()
 }
 
-// Define the build configurations
 // `project()` is the main entry point to the configuration script.
 // It is a function call, which takes as a parameter a block that represents the entire TeamCity project.
-// In that block, we compose the structure of the project.
 project {
-
     params {
         param("env.GOROOT", goRoot)
         param("RUN_LOG_JSON", jsonLog)
@@ -185,7 +179,6 @@ class SqlLiteUnitTests : BuildType({
 class MySqlUnitTests(imgTag: String) : BuildType({
     id("TestUnit_${imgTag}".toId())
     name = "MySQL Unit Tests for $imgTag"
-
     description = "Perform the tests against a specific version"
     maxRunningBuilds = 1
 
@@ -311,8 +304,7 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
             name = "Run Tests"
             id = "Run_Tests"
             scriptContent = """
-                echo "... Launching TC Build from Kotlin DSL"
-
+                echo "... Launching Unit Test for PostGreSQL"
         	    host="localhost"
         	    port="26998"
         	    username="pydio"
