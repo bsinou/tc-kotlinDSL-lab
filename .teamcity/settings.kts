@@ -30,12 +30,20 @@ val pgSqlImageTags: ArrayList<String>
         "postgres:15.8",
     )
 
+// List of KVStore Docker images to test
+val kvStoreImageTags: ArrayList<String>
+    get() = arrayListOf(
+        "mongo:latest",
+        "mongo:6",
+        "mongo:5",
+    )
+
 // Debian Bulleyes might be too violent for our test agents.
 // "postgres:bulleyes",
 
 val runPackages = "./idm/... ./broker/... ./data/... ./scheduler/... ./common/storage/sql/..."
 
-val defaultSqlRun = """
+val runUnitTestsCmd = """
     echo "... Listing test ENV:"
     printenv | grep CELLS_TEST
     
@@ -64,21 +72,25 @@ val defaultSqlRun = """
     go test %RUN_PACKAGES% ${'$'}{args} 
 """.trimIndent()
 
-val waitAndLog = """               
+fun waitAndLog(name: String) : String {
+    return  """               
     echo "...  Wait 60 second to ensure that the container is correctly started"
     sleep 60
     echo "     ==> Done sleeping"
     echo ""
     echo "... Exposing container logs for further verification"
-    docker logs sqldb
+    docker logs $name
 """.trimIndent()
+}
 
-val cleanAfterTest = """
+fun cleanAfterTest(name: String) : String {
+    return  """               
     echo "... Trying to force remove all containers"
     echo "     => will throw Warning for containers that have *not* been started"
-    docker rm -f sqldb
+    docker rm -f $name
     echo "     ==> OK"
 """.trimIndent()
+}
 
 // Define the build configurations
 // `project()` is the main entry point to the configuration script.
@@ -101,6 +113,8 @@ project {
     subProject(MySQLTests())
 
     subProject(PGSQLTests())
+
+    subProject(KvStoreTests())
 }
 
 class MySQLTests : Project({
@@ -120,6 +134,16 @@ class PGSQLTests : Project({
 
     for (imgTag in pgSqlImageTags) {
         buildType(PgSqlUnitTests(imgTag))
+    }
+})
+
+class KvStoreTests : Project({
+    id = AbsoluteId("unit_kvstore_tests")
+    name = "KV Store Tests"
+    description = "Cells V5 Unit Tests against various KV Stores"
+
+    for (imgTag in kvStoreImageTags) {
+        buildType(IndexUnitTests(imgTag))
     }
 })
 
@@ -143,7 +167,7 @@ class SqlLiteUnitTests : BuildType({
             id = "Run_Tests"
             scriptContent = """
                 echo "... Launching TC Build from Kotlin DSL"
-                $defaultSqlRun
+                $runUnitTestsCmd
                 """
         }
     }
@@ -198,7 +222,7 @@ class MySqlUnitTests(imgTag: String) : BuildType({
         script {
             name = "Wait for container"
             id = "wait_before_run"
-            scriptContent = waitAndLog
+            scriptContent = waitAndLog("sqldb")
         }
 
         script {
@@ -221,13 +245,13 @@ class MySqlUnitTests(imgTag: String) : BuildType({
                 mysql_urls="${'$'}dburl"
                 
                 export CELLS_TEST_MYSQL_DSN="${'$'}mysql_urls"
-                $defaultSqlRun
+                $runUnitTestsCmd
                """
         }
         script {
             name = "Clean after tests"
             id = "Clean_after_tests"
-            scriptContent = cleanAfterTest
+            scriptContent = cleanAfterTest("sqldb")
         }
     }
 
@@ -280,7 +304,7 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
         script {
             name = "Wait for container"
             id = "wait_before_run"
-            scriptContent = waitAndLog
+            scriptContent = waitAndLog("sqldb")
         }
 
         script {
@@ -297,14 +321,14 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
         	    dbdsn="postgres://${'$'}{username}:${'$'}{password}@${'$'}{host}:${'$'}{port}/${'$'}{dbname}?sslmode=disable"
         	    echo "... PGSQL DB URL: ${'$'}dbdsn"
         	    export CELLS_TEST_PGSQL_DSN="${'$'}dbdsn"
-                $defaultSqlRun
+                $runUnitTestsCmd
             """.trimIndent()
         }
 
         script {
             name = "Clean after tests"
             id = "Clean_after_tests"
-            scriptContent = cleanAfterTest
+            scriptContent = cleanAfterTest("sqldb")
         }
     }
 
@@ -317,12 +341,11 @@ class PgSqlUnitTests(imgTag: String) : BuildType({
 }
 )
 
-// Define the tests with the default SQL Lite DB
-class BoltBleveUnitTests : BuildType({
-    id("TestUnit_BoltBleve".toId())
-
-    name = "Index Unit Tests with default DB"
-    description = "Perform the tests against the default Bolt and Bleve KVStores"
+// Configure and run the tests against a given KV STore
+class IndexUnitTests(imgTag: String) : BuildType({
+    id("TestUnit_${imgTag}".toId())
+    name = "Index Unit Tests for $imgTag"
+    description = "Perform the tests against a specific version"
     maxRunningBuilds = 1
 
     vcs {
@@ -333,20 +356,55 @@ class BoltBleveUnitTests : BuildType({
     }
 
     params {
-        // (no bolt / no bleve)
-        // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
-        // param("RUN_PACKAGES", runPackages)
+        // Skip default storages during the tests
+        param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
+        // Also skip SQL DB tests as we are focused on indexes
+        param("env.CELLS_TEST_SKIP_SQLITE", "true")
     }
 
     steps {
         script {
+            name = "Relaunch KV Store container"
+            id = "relaunch_kv_store_container"
+            scriptContent = """
+                echo -n "... Force removing existing KV Store container: "
+                docker rm -f kvstore
+                sleep 2
+                echo "     ==> OK"
+                
+                echo "...  Pull and relaunch a new container"
+                docker pull $imgTag
+                docker run --name kvstore -p 26997:27017 -e MYSQL_ROOT_PASSWORD=admin -d $imgTag
+                sleep 2
+                echo "     ==> OK"
+            """.trimIndent()
+        }
+
+        script {
+            name = "Wait for container"
+            id = "wait_before_run"
+            scriptContent = waitAndLog("kvstore")
+        }
+
+        script {
             name = "Run Tests"
             id = "Run_Tests"
             scriptContent = """
-            
-                echo "... Launching TC Build from Kotlin DSL"
-                $defaultSqlRun            
-            """.trimIndent()
+                echo "... Launching Index Unit Test with image: $imgTag"
+                host="localhost"
+	            port="26997"
+	            dbname="testdb"
+	            dburl="mongodb://${'$'}{host}:${'$'}{port}/${'$'}{dbname}"
+	            echo "... KV Store URL: ${'$'}dburl"
+	            export CELLS_TEST_MONGODB_DSN="${'$'}dburl"
+
+                $runUnitTestsCmd
+               """
+        }
+        script {
+            name = "Clean after tests"
+            id = "Clean_after_tests"
+            scriptContent = cleanAfterTest("kvstore")
         }
     }
 
@@ -358,3 +416,45 @@ class BoltBleveUnitTests : BuildType({
     }
 }
 )
+
+//// Define the tests with the default SQL Lite DB
+//class BoltBleveUnitTests : BuildType({
+//    id("TestUnit_BoltBleve".toId())
+//
+//    name = "Index Unit Tests with default DB"
+//    description = "Perform the tests against the default Bolt and Bleve KVStores"
+//    maxRunningBuilds = 1
+//
+//    vcs {
+//        root(
+//            AbsoluteId("Build_CellsHomeNext"),
+//            ". => cells/",
+//        )
+//    }
+//
+//    params {
+//        // (no bolt / no bleve)
+//        // param("env.CELLS_TEST_SKIP_LOCAL_INDEX", "true")
+//        // param("RUN_PACKAGES", runPackages)
+//    }
+//
+//    steps {
+//        script {
+//            name = "Run Tests"
+//            id = "Run_Tests"
+//            scriptContent = """
+//
+//                echo "... Launching TC Build from Kotlin DSL"
+//                $runUnitTestsCmd
+//            """.trimIndent()
+//        }
+//    }
+//
+//    features {
+//        golang {
+//            enabled = true
+//            testFormat = "json"
+//        }
+//    }
+//}
+//)
